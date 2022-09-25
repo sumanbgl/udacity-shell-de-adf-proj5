@@ -1,0 +1,6 @@
+{
+	"gl_param_fiscal_year": {
+		"type": "int",
+		"value": 1970
+	}
+}
