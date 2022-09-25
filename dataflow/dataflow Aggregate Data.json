@@ -1,0 +1,137 @@
+{
+	"name": "dataflow Aggregate Data",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ds_sqldb_payroll",
+						"type": "DatasetReference"
+					},
+					"name": "source1sqldbnycpayrolltable"
+				},
+				{
+					"dataset": {
+						"referenceName": "ds_dl_payroll_history_2020",
+						"type": "DatasetReference"
+					},
+					"name": "source2dlhistorypayroll2020"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ds_synapse_payroll_summary",
+						"type": "DatasetReference"
+					},
+					"name": "sink1synapsepayrollsummary"
+				}
+			],
+			"transformations": [
+				{
+					"name": "convertstringtonumeric"
+				},
+				{
+					"name": "union1sqldbwithdlpayroll"
+				},
+				{
+					"name": "filteronfiscalyear"
+				},
+				{
+					"name": "TotalPaid"
+				},
+				{
+					"name": "groupbyagencynamefiscalyear"
+				}
+			],
+			"scriptLines": [
+				"parameters{",
+				"     pl_param_fiscalyear as integer (1970)",
+				"}",
+				"source(output(",
+				"          FiscalYear as integer,",
+				"          PayrollNumber as integer,",
+				"          AgencyID as string,",
+				"          AgencyName as string,",
+				"          EmployeeID as string,",
+				"          LastName as string,",
+				"          FirstName as string,",
+				"          AgencyStartDate as date,",
+				"          WorkLocationBorough as string,",
+				"          TitleCode as string,",
+				"          TitleDescription as string,",
+				"          LeaveStatusasofJune30 as string,",
+				"          BaseSalary as double,",
+				"          PayBasis as string,",
+				"          RegularHours as double,",
+				"          RegularGrossPaid as double,",
+				"          OTHours as double,",
+				"          TotalOTPaid as double,",
+				"          TotalOtherPay as double",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     isolationLevel: 'READ_UNCOMMITTED',",
+				"     format: 'table') ~> source1sqldbnycpayrolltable",
+				"source(output(",
+				"          FiscalYear as string,",
+				"          PayrollNumber as string,",
+				"          AgencyID as string,",
+				"          AgencyName as string,",
+				"          EmployeeID as string,",
+				"          LastName as string,",
+				"          FirstName as string,",
+				"          AgencyStartDate as string,",
+				"          WorkLocationBorough as string,",
+				"          TitleCode as string,",
+				"          TitleDescription as string,",
+				"          LeaveStatusasofJune30 as string,",
+				"          BaseSalary as string,",
+				"          PayBasis as string,",
+				"          RegularHours as string,",
+				"          RegularGrossPaid as string,",
+				"          OTHours as string,",
+				"          TotalOTPaid as string,",
+				"          TotalOtherPay as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> source2dlhistorypayroll2020",
+				"source2dlhistorypayroll2020 derive(FiscalYear = toInteger(FiscalYear),",
+				"          PayrollNumber = toInteger(PayrollNumber),",
+				"          AgencyStartDate = toDate(AgencyStartDate),",
+				"          BaseSalary = toDouble(BaseSalary),",
+				"          RegularHours = toDouble(RegularHours),",
+				"          RegularGrossPaid = toDouble(RegularGrossPaid),",
+				"          OTHours = toDouble(OTHours),",
+				"          TotalOTPaid = toDouble(TotalOTPaid),",
+				"          TotalOtherPay = toDouble(TotalOtherPay)) ~> convertstringtonumeric",
+				"source1sqldbnycpayrolltable, convertstringtonumeric union(byName: true)~> union1sqldbwithdlpayroll",
+				"union1sqldbwithdlpayroll filter(toInteger(FiscalYear)>=$pl_param_fiscalyear) ~> filteronfiscalyear",
+				"filteronfiscalyear derive(TotalPaid = RegularGrossPaid+TotalOTPaid+TotalOtherPay) ~> TotalPaid",
+				"TotalPaid aggregate(groupBy(AgencyName,",
+				"          FiscalYear),",
+				"     TotalPaid = sum(TotalPaid)) ~> groupbyagencynamefiscalyear",
+				"groupbyagencynamefiscalyear sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          FiscalYear as integer,",
+				"          AgencyName as string,",
+				"          TotalPaid as double",
+				"     ),",
+				"     deletable:false,",
+				"     insertable:true,",
+				"     updateable:false,",
+				"     upsertable:false,",
+				"     truncate:true,",
+				"     format: 'table',",
+				"     staged: true,",
+				"     allowCopyCommand: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sink1synapsepayrollsummary"
+			]
+		}
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "adfudacitydemo",
+	"properties": {
+		"globalParameters": {
+			"gl_param_fiscal_year": {
+				"type": "int",
+				"value": 1970
+			}
+		}
+	},
+	"location": "eastus",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "bfe75c3c-fa90-422a-b6c2-47712b39d0a8",
+		"tenantId": "3617ef9b-98b4-40d9-ba43-e1ed6709cf0d"
+	}
+}
